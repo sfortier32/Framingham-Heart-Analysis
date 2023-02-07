@@ -1,0 +1,162 @@
+---
+title: "Individual Write-Up"
+author: "Sophia Fortier from Group 4"
+output: html_document
+---
+
+### Introduction
+My component of the project focused on analyzing possible relationships between our defined set of variables and "PREVSTRK" or "PREVMI." Both PREVSTRK and PREVMI are binary variables where a zero indicates no previous occurrence and a one indicates a past occurrence. PREVSTRK was the variable for a stroke and PREVMI represented myocardial infarctions or simply heart attacks. The variables were analyzed separately since we didn't want to focus solely on our factors.
+
+For a necessary refresher, our factors were: age, sex, smoking, cigarettes per day (if smoker), diabetes, systolic blood pressure, diastolic blood pressure, total cholesterol, use of blood pressure medication, hypertension, heart rate*
+
+*LDL levels were added last minute so that factor only got analyzed for the coronary heart disease piece of our project.
+
+### Analysis
+
+#### R Packages I Used
+
+```{r, include = FALSE, warning = FALSE, message = FALSE}
+library(tidyverse)
+library(jtools)
+library(gridExtra)
+```
+
+1. ``tidyverse`` specifically...
+    + ``ggplot2``: basic graphing
+2. ``jtools``: creating probability graphs of models
+3. ``gridExtra``: rearranging and condensing graphs into single "pictures"
+
+<br>
+
+#### Methodology
+
+I started by loading in the framingham dataset and subsetting it. I only needed to work with the factors chosen by my project and complete cases.
+
+I then performed a step function on a two separate glm models-one with PREVSTRK and one with PREVMI as the formula outcomes. The step function bypassed the need for picking out specific variables a summmary of a model since the output results in an ideal model (excluding interactions). I manually checked interaction terms for significance by creating a model with every possible combination. The model for PREVMI did have some interaction terms with possible significance, but weeding them out one by one led me to leave them out all together. They seemed situationally significant meaning they became less significant as the model got better. 
+
+The PREVMI model ended up being used to create more in-depth graphics later on. Though, I created both models mainly to inform myself as to which variables I should be graphing.
+
+<br>
+
+**The resulting models were:**
+``glm(PREVSTRK ~ SEX + AGE + PREVHYP + BPMEDS, data = heart, family = binomial)``
+``glm(PREVMI ~ SEX + AGE + DIABETES + DIABP + TOTCHOL + PREVHYP, data = heart, family = binomial)``
+
+<br>
+
+The next step was to rename the levels for each significant variable so that the facets on my graphs would display clearly with text instead of 0 or 1. It helped make everything much more comprehensible. From there, it was just about making the making the graphs while displaying as many variables as possible. I chose geom_density because I wanted to experiment with more visually pleasing distribution graphs. The effect was exactly what I wanted and by doing a transparent fill on on the outcome variable, viewers can easily make comparisons and understand the narrative. I spent quite a bit of time selecting colors to also help with this and make everything as cohesive as possible.
+
+<br>
+
+```{r, include = FALSE}
+heart.df <- read.csv("frmgham2.csv")
+heart <- heart.df[,c("PREVMI", "PREVSTRK", "SEX", "AGE", "CURSMOKE", "CIGPDAY", "DIABETES", "TOTCHOL", "SYSBP", "DIABP", "BPMEDS", "PREVHYP", "HEARTRTE")]
+heart <- heart[complete.cases(heart),]
+
+heart$DIABETES <- as.factor(heart$DIABETES)
+levels(heart$DIABETES) <- c("Non-Diabetic", "Diabetic")
+heart$SEX <- as.factor(heart$SEX)
+levels(heart$SEX) <- c("Male", "Female")
+heart$PREVHYP <- as.factor(heart$PREVHYP)
+levels(heart$PREVHYP) <- c("Not Hypertensive", "Hypertensive")
+heart$PREVMI <- as.factor(heart$PREVMI)
+levels(heart$PREVMI) <- c("No Heart Attack", "Heart Attack")
+heart$CURSMOKE <- as.factor(heart$CURSMOKE)
+levels(heart$CURSMOKE) <- c("Non-Smoker", "Smoker")
+heart$DIABETES <- as.factor(heart$DIABETES)
+levels(heart$DIABETES) <- c("Non-Diabetic", "Diabetic")
+heart$PREVSTRK <- as.factor(heart$PREVSTRK)
+levels(heart$PREVSTRK) <- c("Never Had Stroke", "Had Stroke")
+heart$BPMEDS <- as.factor(heart$BPMEDS)
+levels(heart$BPMEDS) <- c("No BP Meds", "Takes BP Meds")
+```
+
+
+```{r, echo = FALSE}
+theme_set(theme_classic())
+ggplot(heart, aes(x = AGE, fill = PREVSTRK))+
+  geom_density(alpha = 0.3)+
+  labs(title = "Person Density Based on Age and Stroke History",
+       subtitle = "Faceted by Hypertensivity, and Use of Blood Pressure Medication",
+       x = "Age",
+       y = "Person Density")+
+  facet_grid(rows=vars(PREVHYP, BPMEDS))+
+  scale_fill_manual(name = "Past Stroke",
+                    labels = c("No", "Yes"),
+                    values = c("#F7CE5B", "#F9675D"))+
+  theme(
+    axis.title.x = element_text(margin = margin(0.3, 0, 0.4, 0, "cm")),
+    axis.title.y = element_text(margin = margin(0, 0.5, 0, 0, "cm")),
+    plot.title = element_text(margin = margin(0, 0, 0.4, 0, "cm")),
+    axis.line = element_blank(),
+    panel.grid.major = element_line(size = 0.3),
+    panel.border = element_rect(colour = "black", fill=NA, size=0.5)
+  )
+```
+
+
+``Figure 1``: I chose to to facet by two variables. Since applying one vertically and one horizontally looked slightly complex, I opted for a completely horizontal graph that allowed the graphs to actually be bigger. In general, it's easy to see and I wanted to put the most emphasis on distribution shape instead of the density numbers on the side.
+
+<br>
+
+```{r, echo = FALSE}
+ggplot(heart, aes(x = AGE, fill = PREVMI))+
+  geom_density(alpha = 0.3)+
+  labs(title = "Person Density Based on Age and History of Myocardial Infarction", subtitle = "Faceted by Sex and Diabetic Status", y = "Person Density", x = "Age")+
+  scale_fill_manual(name = "Past Heart Attack",
+                    labels = c("No", "Yes"),
+                    values = c("#68CCDA", "#054A91"))+
+  facet_grid(rows=vars(DIABETES), cols=vars(SEX))+
+  theme(
+    axis.title.x = element_text(margin = margin(0.3, 0, 0.4, 0, "cm")),
+    axis.title.y = element_text(margin = margin(0, 0.5, 0, 0, "cm")),
+    plot.title = element_text(margin = margin(0, 0, 0.4, 0, "cm")),
+    axis.line = element_blank(),
+    panel.grid.major = element_line(size = 0.3),
+    panel.border = element_rect(colour = "black", fill=NA, size=0.5)
+  )
+```
+
+
+``Figure 2``: This graph was the same in essence as the stroke density plot. I did choose blues instead to immitate waves as seen in the rising tide economist article from class.
+
+<br>
+
+```{r, echo = FALSE}
+fit <- glm(PREVMI ~ SEX + AGE + DIABETES + DIABP + PREVHYP, data=heart, family=binomial)
+p1<-effect_plot(fit, pred = PREVHYP, colors = "#B6E5EF")+
+  scale_y_continuous(limits = c(0, 0.1))
+p2<-effect_plot(fit, pred = SEX, colors = "#60ADD8")+
+  scale_y_continuous(limits = c(0, 0.1))
+p3<-effect_plot(fit, pred = DIABETES, colors = "#0E60BC")+
+  scale_y_continuous(limits = c(0, 0.1))
+p4<-effect_plot(fit, pred = AGE, colors = "#08277E")+
+  scale_y_continuous(limits = c(0, 0.15))
+p5<-effect_plot(fit, pred = DIABP, colors = "#04073F")+
+  scale_y_continuous(limits = c(0, 0.1))
+grid.arrange(p1, p2, p3, ncol = 3)
+```
+
+<br>
+
+```{r, echo = FALSE}
+grid.arrange(p4, p5, nrow = 2)
+```
+
+``Figure 3, 4``: These were slightly more technical representations of what was going on beneath the surface of the prettier graphs. With the percentage change in the likelihood of having a past heart attack on the side, viewers can see exactly how influential each variable is. I opted for these nicely colored graphs since they're easier for regular people to understand (with a little context) than model output.
+
+### Conclusion
+
+In the end, I feel as though the graphs I made conveyed our story through color, shape, and direction. These are things we learn about in middle school art class. This approach makes the data much more accessible to younger or uninformed audiences. 
+
+Stepping back from the design for a moment, I thought the findings were surprising. While sex and age are very often influential in medical data, I didn't expect any of the other variables. My minimal knowledge of the cardiovascular system led me to believe that blood pressure and cholesterol would be the most influential factors due to their roles in artery function. I was somewhat mistaken, but it seems that hypertension, a more severe manifestation of arterial damage, was significant.
+
+I left out the probability graphs that I created for the stroke model, but it was strange how many variables could be deemed influential while barely affecting the outcome variable. For strokes, aging 50 years only increased the chance of having a (past) stroke from 1 to 3%. This is minute compared to the 15% increase on the probability of having a heart attack that aging 50 years has. 
+
+While there weren't any great expectations for the direction of our findings, the analysis of these variables fit perfectly into our story. We were looking for factors that coincide with the occurrence of severe medial events. The more often that these factors appear alongside these events, the better preventative measures can become.
+
+### Other
+
+I wanted to include links to the color generators I used this semester in case you'd like to share them with future students!
+<br>Discrete Palettes: https://coolors.co
+<br>Continuous (and adjustable) Color Palettes: https://hihayk.github.io/scale/#7/3/50/62/-50/59/19/14/1D9A6C/29/154/108/white
